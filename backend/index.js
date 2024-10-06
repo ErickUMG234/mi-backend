@@ -159,6 +159,8 @@ app.post('/login', async (req, res) => {
             return res.status(401).send('Usuario no encontrado');
         }
         console.log(`Usuario encontrado: ${user.nombre_usuario}`);
+        console.log('Contraseña ingresada:', password);
+        console.log('Contraseña hasheada almacenada:', user.Password);
 
         // Verificar la contraseña hasheada
         const validPassword = await bcrypt.compare(password, user.Password);
