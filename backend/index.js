@@ -162,6 +162,8 @@ app.post('/login', async (req, res) => {
 
         // Verificar la contraseña hasheada
         const validPassword = await bcrypt.compare(password, user.Password);
+        console.log('Contraseña en texto plano:', password);  // Contraseña ingresada por el usuario
+         console.log('Contraseña hasheada en la base de datos:', user.Password);  // Hash de la contraseña en la base de datos
         if (!validPassword) {
             console.log('Contraseña incorrecta');
             return res.status(401).send('Contraseña incorrecta');
