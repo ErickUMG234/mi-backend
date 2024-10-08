@@ -242,7 +242,7 @@ app.get('/Materiales', async (req, res) => {
     try {
         await sql.connect(dbConfig);
         const request = new sql.Request();
-        const result = await request().query`SELECT * FROM Materiales`; // Consulta a la base de datos
+        const result = await request.query`SELECT * FROM Materiales`; // Consulta a la base de datos
         res.json(result.recordset);
     } catch (err) {
         console.error(err);
