@@ -109,7 +109,7 @@ const upload = multer({ storage: storage });
 
 
 // Función para registrar un usuario
-/*async function registerUser(nombre_usuario, email, password, id_rol) {
+  async function registerUser(nombre_usuario, email, password, id_rol) {
     try {
         await sql.connect(dbConfig);
 
@@ -136,7 +136,7 @@ const upload = multer({ storage: storage });
 }
 
 // Llama a la función para registrar un usuario
-registerUser('bodeguero', 'bodeguero@gmail.com', 'bodeguero123');*/
+registerUser('bodeguero', 'bodeguero@gmail.com', 'bodeguero123');
 
 
 //LOGIN
