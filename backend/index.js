@@ -142,7 +142,7 @@ registerUser('bodeguero', 'bodeguero@gmail.com', 'bodeguero123');*/
 //LOGIN
 //____________________________________________________________________
 // **Ruta de login**
-app.post('https://samayac-erick-ixcots-projects.vercel.app/login', async (req, res) => {
+app.post('/login', async (req, res) => {
     const { email, password } = req.body;
     console.log(`Intentando iniciar sesión con email: ${email}`);
     console.log('Datos enviados:', { email, password });
