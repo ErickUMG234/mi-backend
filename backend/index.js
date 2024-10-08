@@ -109,7 +109,7 @@ const upload = multer({ storage: storage });
 
 
 // Función para registrar un usuario
-  async function registerUser(nombre_usuario, email, password, id_rol) {
+  /*async function registerUser(nombre_usuario, email, password, id_rol) {
     try {
         await sql.connect(dbConfig);
 
@@ -136,7 +136,7 @@ const upload = multer({ storage: storage });
 }
 
 // Llama a la función para registrar un usuario
-registerUser('bodeguero', 'bodeguero@gmail.com', 'bodeguero123');
+registerUser('bodeguero', 'bodeguero@gmail.com', 'bodeguero123');*/
 
 
 //LOGIN
@@ -753,7 +753,7 @@ app.put('/Proveedores/:id_proveedor', async (req, res) => {
 //Conexion a la base de datos para ingresar Proveedores
 //______________________________________________________________
 // Insertar nuevos datos en la tabla Proveedores
-app.post('/Proveedores', async (req, res) => {
+app.post('/create/Proveedores', async (req, res) => {
     try {
         await sql.connect(dbConfig);
         const { nombre_proveedor, contacto, direccion, telefono, email } = req.body;
@@ -807,7 +807,7 @@ app.get('/Usuarios', async (req, res) => {
 //Conexion a la base de datos para ingresar los ingresos
 //______________________________________________________________
 // Insertar nuevos datos en la tabla Ingresos
-app.post('/Ingresos', upload.single('solicitud_recibido'), async (req, res) => {
+app.post('/create/Ingresos', upload.single('solicitud_recibido'), async (req, res) => {
     try {
         await sql.connect(dbConfig);
         console.log('Datos recibidos en el cuerpo de la solicitud:', req.body);
@@ -936,203 +936,4 @@ app.listen(PORT, () => console.log(`Servidor corriendo en el puerto ${PORT}`));
 
 
 
-/*const express = require('express');
-const cors = require('cors');
-const sql = require('mssql');
 
-
-const app = express();
-app.use(cors()); // Habilita CORS para que React pueda comunicarse con el backend
-
-app.use(express.json());
-
-
-
-// Middleware para depuración
-app.use((req, res, next) => {
-   // console.log('Headers:', req.headers);
-   // console.log('Body:', req.body);
-    next();
-});
-
-
-const corsOptions = {
-    origin: 'http://localhost:5173', // Permitir solo solicitudes desde Vite
-    optionsSuccessStatus: 200
-};
-
-app.use(cors(corsOptions)); // Aplica CORS a todas las rutas
-
-// Configuración de la base de datos SQL Server
-const dbConfig = {
-    user: 'sa',
-    password: 'erick123',
-    server: 'DESKTOP-SG90P1Q', // dirección de tu servidor SQL Server
-    database: 'BDSamayac',
-    options: {
-        encrypt: true, // Usa true si estás en Azure, de lo contrario false
-        trustServerCertificate: true // solo en desarrollo
-    }
-};
-
-// Función para convertir la fecha de yyyy-MM-dd a un formato aceptable para SQL Server
-const convertDateFormat = (dateString) => {
-    const [year, month, day] = dateString.split('-');
-    return `${year}-${month}-${day}`;
-};
-
-
-
-
-
-
-// Conectar a la base de datos y obtener datos
-app.get('/Materiales', async (req, res) => {
-    try {
-        await sql.connect(dbConfig);
-        const result = await sql.query`SELECT * FROM Materiales`; // Consulta a la base de datos
-        res.json(result.recordset);
-    } catch (err) {
-        console.error(err);
-        res.status(500).send('Error en la solicitud');
-    }
-});
-
-// Insertar nuevos datos en la tabla Materiales
-app.post('/Materiales', async (req, res) => {
-    try {
-        await sql.connect(dbConfig);
-        const { nombre_material, descripcion, unidades, Cantidad_disponible, fecha_registro} = req.body;
-        if (!nombre_material || !descripcion || !unidades || !Cantidad_disponible || !fecha_registro ) {
-            return res.status(403).send('Faltan datos necesarios para crear el material');
-        }
-        
-      // Conversión de la fecha al formato adecuado
-                   
-                   const formattedDate = convertDateFormat(fecha_registro);
-
-        const query = `INSERT INTO Materiales (nombre_material, descripcion, unidades, Cantidad_disponible, fecha_registro) 
-                       VALUES (@nombre_material, @descripcion, @unidades, @Cantidad_disponible, @fecha_registro)`;
-
-                       const request = new sql.Request();
-                       request.input('nombre_material', sql.NVarChar, nombre_material);
-                       request.input('descripcion', sql.NVarChar, descripcion);
-                       request.input('unidades', sql.NVarChar, unidades);
-                       request.input('Cantidad_disponible', sql.Int, Cantidad_disponible);
-                       request.input('fecha_registro', sql.DateTime, new Date(fecha_registro));
-
-
-                       //Me ayuda a ver que datos estoy enviando al servidor
-                       console.log({
-                        nombre_material,
-                        descripcion,
-                        unidades,
-                        Cantidad_disponible,
-                        fecha_registro: formattedDate
-                    });
-
-
-        await request.query(query);
-        res.status(201).send('Material creado exitosamente');
-    } catch (err) {
-        console.error(err);
-        res.status(500).send('Error al crear el material');
-    }
-});
-
-
-
-
-
-
-// Actualizar un material existente
-app.put('/Materiales/:id_material', async (req, res) => {
-    console.log('Received request to update material:', req.body, req.params);
-    const { id_material } = req.params;
-    const { nombre_material, descripcion, unidades, Cantidad_disponible, fecha_registro } = req.body;
-
-    console.log("Datos recibidos en backend:", req.body);
-
-    // Validación adicional para fecha_registro
-    if (!nombre_material || !descripcion || !unidades || !Cantidad_disponible || !fecha_registro) {
-        return res.status(400).send('Todos los campos son obligatorios');
-    }
-
-    // Convertir la fecha si está presente
- 
-         const formattedDate= convertDateFormat(fecha_registro);
-    
-
-    const query = `
-        UPDATE Materiales 
-        SET nombre_material = @nombre_material, 
-            descripcion = @descripcion, 
-            unidades = @unidades, 
-            Cantidad_disponible = @Cantidad_disponible, 
-            fecha_registro = @fecha_registro
-        WHERE id_material = @id_material
-    `;
-
-    const request = new sql.Request();
-    request.input('id_material', sql.Int, id_material);
-    request.input('nombre_material', sql.NVarChar, nombre_material);
-    request.input('descripcion', sql.NVarChar, descripcion);
-    request.input('unidades', sql.NVarChar, unidades);
-    request.input('Cantidad_disponible', sql.Int, Cantidad_disponible);
-    request.input('fecha_registro', sql.DateTime, new Date(formattedDate));
-
-    
-                       //Me ayuda a ver que datos estoy enviando al servidor
-                       console.log({
-                        nombre_material,
-                        descripcion,
-                        unidades,
-                        Cantidad_disponible,
-                        fecha_registro: formattedDate
-                    });
-
-    try {
-        const result = await request.query(query);
-
-        // Verificar si el material fue actualizado
-        if (result.rowsAffected[0] === 0) {
-            return res.status(409).send('Material no encontrado');
-        }
-
-        res.status(200).send('Material actualizado correctamente');
-    } catch (error) {
-        console.error(error);
-        res.status(500).send('error al actualizar el material');
-    }
-});
-
-
-
-
-// Eliminar un material existente
-app.delete('/Materiales/:id_material', async (req, res) => {
-    const { id_material } = req.params; // Obtener el id_material de los parámetros de la solicitud
-
-    try {
-        await sql.connect(dbConfig); // Conectar a la base de datos
-        const query = 'DELETE FROM Materiales WHERE id_material = @id_material'; // Consulta SQL para eliminar
-        const request = new sql.Request();
-        request.input('id_material', sql.Int, id_material); // Vincular el id_material al parámetro
-
-        const result = await request.query(query); // Ejecutar la consulta SQL
-
-        if (result.rowsAffected[0] === 0) {
-            return res.status(404).send('Material no encontrado'); // Manejar caso en que el material no existe
-        }
-
-        res.status(200).send('Material eliminado correctamente'); // Respuesta de éxito
-    } catch (err) {
-        console.error(err);
-        res.status(500).send('Error al eliminar el material'); // Manejar errores
-    }
-});
-
-
-// Inicia el servidor
-const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => console.log(`Servidor corriendo en el puerto ${PORT}`));*/
