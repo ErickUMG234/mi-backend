@@ -7,6 +7,7 @@ const jwt = require('jsonwebtoken');
 const bodyParser = require('body-parser');
 const bcrypt = require('bcryptjs');
 require('dotenv').config();
+const path = require('path');
 
 
 const multer = require('multer');
