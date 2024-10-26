@@ -466,43 +466,47 @@ app.get('/Usuarios', async (req, res) => {
 app.post('/Ingresos', upload.single('solicitud_recibido'), async (req, res) => {
     try {
         await sql.connect(dbConfig);
-        console.log('Datos recibidos en el cuerpo de la solicitud:', req.body);
-        console.log('Archivo recibido:', req.file);
-        const { id_material, id_proveedor, cantidad_ingresada, fecha_ingreso, id_usuario } = req.body;
-        const solicitud_recibido = req.file ? req.file.filename : null;
         
-        if (!id_material || !id_proveedor || !cantidad_ingresada || !fecha_ingreso || !id_usuario) {
-            console.log('Faltan datos requeridos para registrar el ingreso');
-            return res.status(403).send('Faltan datos necesarios para crear el ingreso');
+        const { descripcion, proveedor_materiales } = req.body;  // `proveedor_materiales` debe ser un array de objetos con id_material, id_proveedor, cantidad_ingresada
+        const solicitud_recibido = req.file ? req.file.filename : null;  // El archivo recibido (si existe)
+        const id_usuario = req.body.id_usuario;  // El ID del usuario autenticado que creó el ingreso
+        
+        if (!descripcion || !id_usuario || !proveedor_materiales || proveedor_materiales.length === 0) {
+            return res.status(403).send('Faltan datos necesarios para crear la solicitud de ingreso');
         }
+
        
-    
-        const query = `INSERT INTO Ingresos (id_material, id_proveedor, cantidad_ingresada, fecha_ingreso, id_usuario, solicitud_recibido) 
-                       VALUES (@id_material, @id_proveedor, @cantidad_ingresada, @fecha_ingreso, @id_usuario, @solicitud_recibido)`;
+        const requestAprobacion = new sql.Request();
+        requestAprobacion.input('descripcion', sql.VarChar, descripcion);
+        requestAprobacion.input('solicitud_recibido', sql.NVarChar(sql.MAX), solicitud_recibido);
+        const resultAprobacion = await requestAprobacion.query('INSERT INTO Aprobaciones (descripcion, solicitud_recibido) OUTPUT inserted.id_aprobacion VALUES (@descripcion, @solicitud_recibido)');
+        const id_aprobacion = resultAprobacion.recordset[0].id_aprobacion;
 
-        const request = new sql.Request();
-        request.input('id_material', sql.Int, id_material);
-        request.input('id_proveedor', sql.Int, id_proveedor);
-        request.input('cantidad_ingresada', sql.Int, cantidad_ingresada);
-        request.input('fecha_ingreso', sql.DateTime, new Date(fecha_ingreso));
-        request.input('id_usuario', sql.Int, id_usuario);
-        request.input('solicitud_recibido', sql.NVarChar(sql.MAX), solicitud_recibido);
+        
+        for (const ingreso of JSON.parse(proveedor_materiales)) {
+            const { id_material, id_proveedor, cantidad_ingresada, fecha_ingreso } = ingreso;
 
-        console.log({
-            id_material,
-            id_proveedor,
-           cantidad_ingresada,
-           fecha_ingreso,
-           id_usuario,
-           solicitud_recibido
-       });
-       
+         
+            const requestIngreso = new sql.Request();
+            requestIngreso.input('id_proveedor', sql.Int, id_proveedor);
+            requestIngreso.input('id_aprobacion', sql.Int, id_aprobacion);
+            requestIngreso.input('cantidad_ingreso', sql.Int, cantidad_ingresada);
+            requestIngreso.input('id_usuario', sql.Int, id_usuario);
+            requestIngreso.input('fecha_ingreso', sql.DateTime, new Date(fecha_ingreso));
+            const resultIngreso = await requestIngreso.query('INSERT INTO Ingresos (id_proveedor, id_aprobacion, cantidad_ingreso, id_usuario, fecha_ingreso) OUTPUT inserted.id_ingreso VALUES (@id_proveedor, @id_aprobacion, @cantidad_ingreso, @id_usuario, @fecha_ingreso)');
+            const id_ingreso = resultIngreso.recordset[0].id_ingreso;
 
-        await request.query(query);
-        res.status(201).send('Ingreso registrado exitosamente');
+            // Relacionar el ingreso con el material
+            const requestIngresoMaterial = new sql.Request();
+            requestIngresoMaterial.input('id_material', sql.Int, id_material);
+            requestIngresoMaterial.input('id_ingreso', sql.Int, id_ingreso);
+            await requestIngresoMaterial.query('INSERT INTO Ingreso_Material (id_material, id_ingreso) VALUES (@id_material, @id_ingreso)');
+        }
+
+        res.status(201).json({ message: 'Ingreso registrado exitosamente' });
     } catch (err) {
-        console.error(err);
-        res.status(500).send('Error al registrar el ingreso');
+        console.error("Error creando los ingresos:", err);
+        res.status(500).send('Error al registrar los ingresos');
     }
 });
 
@@ -512,34 +516,27 @@ app.post('/Ingresos', upload.single('solicitud_recibido'), async (req, res) => {
 app.get('/Ingresos', async (req, res) => {
     try {
         await sql.connect(dbConfig);
-
         const result = await sql.query(`
             SELECT 
-                i.id_ingreso, 
-                m.nombre_material, 
-                p.nombre_proveedor, 
-                u.nombre_usuario, 
-                i.cantidad_ingresada, 
-                i.fecha_ingreso, 
-                i.solicitud_recibido
-            FROM 
-                Ingresos i
-            JOIN 
-                Materiales m ON i.id_material = m.id_material
-            JOIN 
-                Proveedores p ON i.id_proveedor = p.id_proveedor
-            JOIN 
-                Usuario u ON i.id_usuario = u.id_usuario;
+                I.id_ingreso, 
+                M.nombre_material, 
+                P.nombre_proveedor, 
+                I.cantidad_ingreso,  
+                I.fecha_ingreso, 
+                U.nombre_usuario, 
+                A.solicitud_recibido 
+            FROM Ingresos I
+            INNER JOIN Ingreso_Material IM ON I.id_ingreso = IM.id_ingreso
+            INNER JOIN Materiales M ON IM.id_material = M.id_material
+            INNER JOIN Proveedores P ON I.id_proveedor = P.id_proveedor
+            INNER JOIN Usuario U ON I.id_usuario = U.id_usuario
+            INNER JOIN Aprobaciones A ON I.id_aprobacion = A.id_aprobacion
         `);
-
-        res.status(200).json(result.recordset);
-        console.log('datos obtenidos', req.body);
-    } catch (error) {
-        console.error('Error al obtener los ingresos:', error);
+        res.json(result.recordset);
+    } catch (err) {
+        console.error(err);
         res.status(500).send('Error al obtener los ingresos');
     }
-
-    
 });
 
 app.get('/egreso', async (req, res) => {
