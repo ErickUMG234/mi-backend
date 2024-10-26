@@ -106,7 +106,7 @@ const upload = multer({ storage: storage });
 }
 
 // Llama a la función para registrar un usuario
-registerUser('bodeguero', 'bodeguero@gmail.com', 'bodeguero123');
+registerUser('bodeguero2', 'bodeguero2@gmail.com', 'bodeguero123',1);
 
 
 
