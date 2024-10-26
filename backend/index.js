@@ -76,7 +76,7 @@ const storage = multer.diskStorage({
 });
 
 const upload = multer({ storage: storage });
-
+app.use('/uploads/', express.static(path.join(__dirname, 'uploads')));
 
 // Función para registrar un usuario
  /* async function registerUser(nombre_usuario, email, password, id_rol) {
