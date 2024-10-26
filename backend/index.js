@@ -8,7 +8,7 @@ const bodyParser = require('body-parser');
 const bcrypt = require('bcryptjs');
 require('dotenv').config();
 
-//const SECRET_KEY = 'your_secret_key';
+
 const multer = require('multer');
 
 
@@ -19,7 +19,6 @@ app.use(express.json());
 
 
 
-// Middleware para depuración
 app.use((req, res, next) => {
    // console.log('Headers:', req.headers);
    // console.log('Body:', req.body);
@@ -28,14 +27,13 @@ app.use((req, res, next) => {
 
 
 const corsOptions = {
-    origin: 'https://samayac-erick-ixcots-projects.vercel.app', // Reemplaza esto con la URL de tu frontend en Vercel
-    methods: ['GET', 'POST', 'PUT', 'DELETE'], // Métodos HTTP permitidos
-    allowedHeaders: ['Content-Type', 'Authorization'], // Encabezados permitidos
+    origin: 'https://samayac-erick-ixcots-projects.vercel.app', 
+    methods: ['GET', 'POST', 'PUT', 'DELETE'], 
+    allowedHeaders: ['Content-Type', 'Authorization'], 
     optionsSuccessStatus: 200
 };
 
-app.use(cors(corsOptions)); // Aplica CORS a todas las rutas
-
+app.use(cors(corsOptions)); 
 const dbConfig = {
     user: process.env.DB_USER,
     password: process.env.DB_PASSWORD,
@@ -55,47 +53,19 @@ console.log('DB_NAME:', process.env.DB_NAME);
 
 
 
-  
 
-  
-
-// Configuración de la base de datos SmarterASP
-/*const dbConfig = {
-    user: 'db_aad8c4_bdsamayac_admin',
-    password: 'erick123',
-    server: 'sql8005.site4now.net', // dirección de tu servidor SQL Server
-    database: 'BDSamayac',
-    options: {
-        encrypt: true, // Usa true si estás en Azure, de lo contrario false
-        trustServerCertificate: true // solo en desarrollo
-    }
-};*/
-
-// Configuración de la base de datos SQL Server
-/*const dbConfig = {
-    user: 'db_aad8c4_bdsamayac_admin',
-    password: 'erick123',
-    server: 'sql8005.site4now.net', // dirección de tu servidor SQL Server
-    database: 'BDSamayac',
-    options: {
-        encrypt: true, // Usa true si estás en Azure, de lo contrario false
-        trustServerCertificate: true // solo en desarrollo
-    }
-};*/
-
-// Importar las rutas de egresos
 const egresosRoutes = require('./routes/egresos');
 
-// Usar las rutas de egresos
+
 app.use('/egresos', egresosRoutes);
 
-// Función para convertir la fecha de yyyy-MM-dd a un formato aceptable para SQL Server
+
 const convertDateFormat = (dateString) => {
     const [year, month, day] = dateString.split('-');
     return `${year}-${month}-${day}`;
 };
 
-// Configuración de multer
+
 const storage = multer.diskStorage({
     destination: function (req, file, cb) {
         cb(null, 'uploads/');
@@ -109,7 +79,7 @@ const upload = multer({ storage: storage });
 
 
 // Función para registrar un usuario
-  /*async function registerUser(nombre_usuario, email, password, id_rol) {
+  async function registerUser(nombre_usuario, email, password, id_rol) {
     try {
         await sql.connect(dbConfig);
 
@@ -136,12 +106,10 @@ const upload = multer({ storage: storage });
 }
 
 // Llama a la función para registrar un usuario
-registerUser('bodeguero', 'bodeguero@gmail.com', 'bodeguero123');*/
+registerUser('bodeguero', 'bodeguero@gmail.com', 'bodeguero123');
 
 
-//LOGIN
-//____________________________________________________________________
-// **Ruta de login**
+
 app.post('/login', async (req, res) => {
     const { email, password } = req.body;
     console.log(`Intentando iniciar sesión con email: ${email}`);
@@ -162,7 +130,7 @@ app.post('/login', async (req, res) => {
         console.log('Contraseña ingresada:', password);
         console.log('Contraseña hasheada almacenada:', user.Password);
 
-        // Verificar la contraseña hasheada
+      
         const validPassword = await bcrypt.compare(password, user.Password);
         console.log('Contraseña en texto plano:', password);  // Contraseña ingresada por el usuario
          console.log('Contraseña hasheada en la base de datos:', user.Password);  // Hash de la contraseña en la base de datos
@@ -171,7 +139,7 @@ app.post('/login', async (req, res) => {
             return res.status(401).send('Contraseña incorrecta');
         }
 
-        // Generar un token JWT
+       
         const token = jwt.sign(
             { id: user.id_usuario, email: user.email, id_rol: user.id_rol },
             SECRET_KEY,
@@ -180,7 +148,7 @@ app.post('/login', async (req, res) => {
 
         console.log('Token generado:', token); 
        
-        // Devolver el token y los datos del usuario
+        
         return res.json({
             token,
             user: {
@@ -200,7 +168,7 @@ app.post('/login', async (req, res) => {
 });
 
 
-// Ruta para obtener la información del usuario autenticado
+
 app.get('/me', (req, res) => {
     const token = req.headers.authorization.split(" ")[1]; // Extraer el token del header Authorization
     if (!token) {
@@ -219,25 +187,6 @@ app.get('/me', (req, res) => {
     }
 });
 
-
-/*const verifyToken = (req, res, next) => {
-    const token = req.headers['authorization'];
-    if (!token) {
-        return res.status(403).send('Token no proporcionado');
-    }
-
-    jwt.verify(token, SECRET_KEY, (err, decoded) => {
-        if (err) {
-            return res.status(401).send('Token inválido');
-        }
-        req.userId = decoded.id;
-        next();
-    });
-};*/
-
-//Conexion a la base de datos para mostrar en pantalla
-//______________________________________________________________
-// Conectar a la base de datos y obtener datos
 app.get('/Materiales', async (req, res) => {
     try {
         await sql.connect(dbConfig);
@@ -250,10 +199,6 @@ app.get('/Materiales', async (req, res) => {
     }
 });
 
-
-//Conexion a la base de datos para ingresar Materiales
-//______________________________________________________________
-// Insertar nuevos datos en la tabla Materiales
 app.post('/Materiales',async (req, res) => {
     try {
         await sql.connect(dbConfig);
@@ -262,7 +207,7 @@ app.post('/Materiales',async (req, res) => {
             return res.status(403).send('Faltan datos necesarios para crear el material');
         }
         
-      // Conversión de la fecha al formato adecuado
+
                    
                    const formattedDate = convertDateFormat(fecha_registro);
 
@@ -278,7 +223,7 @@ app.post('/Materiales',async (req, res) => {
                        request.input('fecha_registro', sql.DateTime, new Date(fecha_registro));
 
 
-                       //Me ayuda a ver que datos estoy enviando al servidor
+                       
                        console.log({
                         nombre_material,
                         descripcion,
@@ -299,10 +244,7 @@ app.post('/Materiales',async (req, res) => {
 
 
 
-//Conexion a la base de datos para actualizar los Materiales
-//______________________________________________________________
 
-// Actualizar un material existente
 app.put('/Materiales/:id_material', async (req, res) => {
     console.log('Received request to update material:', req.body, req.params);
     const { id_material } = req.params;
@@ -310,12 +252,12 @@ app.put('/Materiales/:id_material', async (req, res) => {
 
     console.log("Datos recibidos en backend:", req.body);
 
-    // Validación adicional para fecha_registro
+    
     if (!nombre_material || !descripcion || !unidades || !Cantidad_disponible || !fecha_registro) {
         return res.status(400).send('Todos los campos son obligatorios');
     }
 
-    // Convertir la fecha si está presente
+  
  
          const formattedDate= convertDateFormat(fecha_registro);
     
@@ -339,7 +281,7 @@ app.put('/Materiales/:id_material', async (req, res) => {
     request.input('fecha_registro', sql.DateTime, new Date(formattedDate));
 
     
-                       //Me ayuda a ver que datos estoy enviando al servidor
+                      
                        console.log({
                         nombre_material,
                         descripcion,
@@ -351,7 +293,7 @@ app.put('/Materiales/:id_material', async (req, res) => {
     try {
         const result = await request.query(query);
 
-        // Verificar si el material fue actualizado
+       
         if (result.rowsAffected[0] === 0) {
             return res.status(409).send('Material no encontrado');
         }
@@ -363,11 +305,6 @@ app.put('/Materiales/:id_material', async (req, res) => {
     }
 });
 
-
-//Conexion a la base de datos para Eliminacion de Materiales
-//______________________________________________________________
-
-// Eliminar un material existente
 app.delete('/Materiales/:id_material', async (req, res) => {
     const { id_material } = req.params; 
 
@@ -390,8 +327,7 @@ app.delete('/Materiales/:id_material', async (req, res) => {
     }
 });
 
-//Conexion a la base de datos para Proveedores
-//______________________________________________________________
+
 
 app.get('/Proveedores', async (req, res) => {
     try {
@@ -408,10 +344,7 @@ app.get('/Proveedores', async (req, res) => {
 
 
 
-//Conexion a la base de datos para Eliminacion de Proveedores
-//______________________________________________________________
 
-// Eliminar un Proveedor existente
 app.delete('/Proveedores/:id_proveedor', async (req, res) => {
     const { id_proveedor } = req.params; 
 
@@ -434,10 +367,7 @@ app.delete('/Proveedores/:id_proveedor', async (req, res) => {
     }
 });
 
-//Conexion a la base de datos para actualizar los Proveedores
-//______________________________________________________________
 
-// Actualizar un proveedor existente
 app.put('/Proveedores/:id_proveedor', async (req, res) => {
     const { id_proveedor } = req.params;
     const { nombre_proveedor, contacto, direccion, telefono, email } = req.body;
@@ -480,9 +410,7 @@ app.put('/Proveedores/:id_proveedor', async (req, res) => {
 });
 
 
-//Conexion a la base de datos para ingresar Proveedores
-//______________________________________________________________
-// Insertar nuevos datos en la tabla Proveedores
+
 app.post('/Proveedores', async (req, res) => {
     try {
         await sql.connect(dbConfig);
@@ -504,7 +432,7 @@ app.post('/Proveedores', async (req, res) => {
         request.input('telefono', sql.NVarChar, telefono);
         request.input('email', sql.NVarChar, email);
 
-        // Me ayuda a ver qué datos estoy enviando al servidor
+        
         console.log({
             nombre_proveedor,
             contacto,
@@ -534,9 +462,7 @@ app.get('/Usuarios', async (req, res) => {
 
 
 
-//Conexion a la base de datos para ingresar los ingresos
-//______________________________________________________________
-// Insertar nuevos datos en la tabla Ingresos
+
 app.post('/Ingresos', upload.single('solicitud_recibido'), async (req, res) => {
     try {
         await sql.connect(dbConfig);
@@ -549,7 +475,7 @@ app.post('/Ingresos', upload.single('solicitud_recibido'), async (req, res) => {
             console.log('Faltan datos requeridos para registrar el ingreso');
             return res.status(403).send('Faltan datos necesarios para crear el ingreso');
         }
-        //const formattedDate= convertDateFormat(fecha_ingreso);
+       
     
         const query = `INSERT INTO Ingresos (id_material, id_proveedor, cantidad_ingresada, fecha_ingreso, id_usuario, solicitud_recibido) 
                        VALUES (@id_material, @id_proveedor, @cantidad_ingresada, @fecha_ingreso, @id_usuario, @solicitud_recibido)`;
@@ -616,39 +542,39 @@ app.get('/Ingresos', async (req, res) => {
     
 });
 
-app.get('/egresos', async (req, res) => {
+app.get('/egreso', async (req, res) => {
     try {
-        // Conexión a la base de datos
         await sql.connect(dbConfig);
-
-        // Consulta SQL
-        const query = `
+        const result = await sql.query(`
             SELECT 
-                e.id_egreso,
-                m.nombre_material,
-                i.cantidad_ingresada,
-                e.cantidad_egresada,
-                e.fecha_egreso,
-                u.nombre_solicitante,
-                u.area_solicitante
-            FROM 
-                Egresos e
-            JOIN 
-                Materiales m ON e.id_material = m.id_material
-            JOIN 
-                Ubicacion u ON e.id_ubicacion = u.id_ubicacion
-            LEFT JOIN
-                Ingresos i ON e.id_material = i.id_material;
-        `;
+                E.id_egreso, 
+                M.nombre_material, 
+                E.cantidad_egresada AS cantidad_egreso, 
+                (SELECT SUM(I.cantidad_ingreso) 
+                 FROM Ingreso_Material IM 
+                 INNER JOIN Ingresos I ON IM.id_ingreso = I.id_ingreso 
+                 WHERE IM.id_material = M.id_material) AS cantidad_ingreso, 
+                ((SELECT SUM(I.cantidad_ingreso) 
+                  FROM Ingreso_Material IM 
+                  INNER JOIN Ingresos I ON IM.id_ingreso = I.id_ingreso 
+                  WHERE IM.id_material = M.id_material) -
+                 (SELECT SUM(E2.cantidad_egresada) 
+                  FROM Egreso_Material EM2 
+                  INNER JOIN Egresos E2 ON EM2.id_egreso = E2.id_egreso 
+                  WHERE EM2.id_material = M.id_material)) AS cantidad_en_stock,
+                EA.solicitud_aprobada AS solicitud_documento,
+                E.fecha_egreso
+            FROM Egresos E
+            INNER JOIN Egreso_Material EM ON E.id_egreso = EM.id_egreso
+            INNER JOIN Materiales M ON EM.id_material = M.id_material
+            INNER JOIN egreso_aprobado EA ON E.id_egresoaprobado = EA.id_egresoaprobado
+            ORDER BY E.fecha_egreso DESC;
+        `);
 
-        // Ejecutar la consulta
-        const result = await sql.query(query);
-
-        // Devolver los datos en formato JSON
         res.json(result.recordset);
     } catch (err) {
-        console.error('Error al obtener los detalles de los egresos:', err);
-        res.status(500).send('Error al obtener los detalles de los egresos');
+        console.error(err);
+        res.status(500).send('Error al obtener la información de los egresos.');
     }
 });
 

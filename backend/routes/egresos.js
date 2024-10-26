@@ -5,7 +5,7 @@ const sql = require('mssql');
 
 const router = express.Router();
 
-// Configuración de multer
+
 const storage = multer.diskStorage({
     destination: function (req, file, cb) {
         cb(null, 'uploads/');
@@ -16,12 +16,11 @@ const storage = multer.diskStorage({
 });
 const upload = multer({ storage: storage });
 
-// Configuración de la base de datos SQL Server
 const dbConfig = {
-    user: 'sa',
+    user: 'db_aad8c4_bdsamayac_admin',
     password: 'erick123',
-    server: 'DESKTOP-SG90P1Q',
-    database: 'BDSamayac',
+    server: 'sql8005.site4now.net',
+    database: 'db_aad8c4_bdsamayac',
     options: {
         encrypt: true,
         trustServerCertificate: true,
@@ -30,59 +29,91 @@ const dbConfig = {
 
 // Ruta para manejar la creación de registros en Ubicación y Egresos
 router.post('/', upload.single('solicitud_aprobada'), async (req, res) => {
-    const { nombre_ubicacion, descripcion, nombre_solicitante, area_solicitante, fecha_solicitada } = req.body;
-    const { id_material, cantidad_egresada, fecha_egreso } = req.body;
-
     try {
+        console.log('Datos recibidos del frontend:', req.body);
+
         await sql.connect(dbConfig);
-        const transaction = new sql.Transaction();
 
-        await transaction.begin();
+      
+        const materiales = JSON.parse(req.body.materiales);  // Aquí conviertes la cadena a array
+        console.log('Materiales procesados:', materiales);
 
-        try {
-            const requestUbicacion = new sql.Request(transaction);
-            requestUbicacion.input('nombre_ubicacion', sql.NVarChar, nombre_ubicacion);
-            requestUbicacion.input('descripcion', sql.NVarChar, descripcion);
-            requestUbicacion.input('nombre_solicitante', sql.NVarChar, nombre_solicitante);
-            requestUbicacion.input('area_solicitante', sql.NVarChar, area_solicitante);
-            requestUbicacion.input('fecha_solicitada', sql.DateTime, fecha_solicitada);
-            
+        const { fecha_egreso, nombre_ubicacion, descripcion, nombre_solicitante, area_solicitante, fecha_solicitada } = req.body;
+        const solicitud_aprobada = req.file ? req.file.filename : null;
 
-            const resultUbicacion = await requestUbicacion.query(`
-                INSERT INTO Ubicacion (nombre_ubicacion, descripcion, nombre_solicitante, area_solicitante, fecha_solicitada) 
-                OUTPUT INSERTED.id_ubicacion 
+       
+        if (!fecha_egreso || !nombre_ubicacion || !descripcion || !nombre_solicitante || !area_solicitante || !materiales.length) {
+            return res.status(400).send('Faltan campos requeridos o materiales no válidos');
+        }
+
+     
+        const resultUbicacion = await new sql.Request()
+            .input('nombre_ubicacion', sql.NVarChar, nombre_ubicacion)
+            .input('descripcion', sql.NVarChar, descripcion)
+            .input('nombre_solicitante', sql.NVarChar, nombre_solicitante)
+            .input('area_solicitante', sql.NVarChar, area_solicitante)
+            .input('fecha_solicitada', sql.DateTime, new Date(fecha_solicitada))
+            .query(`
+                INSERT INTO Ubicacion (nombre_ubicacion, descripcion, nombre_solicitante, area_solicitante, fecha_solicitada)
+                OUTPUT INSERTED.id_ubicacion
                 VALUES (@nombre_ubicacion, @descripcion, @nombre_solicitante, @area_solicitante, @fecha_solicitada)
             `);
+        const id_ubicacion = resultUbicacion.recordset[0].id_ubicacion;
+        console.log('ID de la Ubicación insertada:', id_ubicacion);
 
-            const id_ubicacion = resultUbicacion.recordset[0].id_ubicacion;
+        
+        const resultEgresoAprobado = await new sql.Request()
+            .input('descripcion', sql.NVarChar, descripcion)
+            .input('solicitud_aprobada', sql.NVarChar, solicitud_aprobada)
+            .query(`
+                INSERT INTO egreso_aprobado (descripcion, solicitud_aprobada)
+                OUTPUT INSERTED.id_egresoaprobado
+                VALUES (@descripcion, @solicitud_aprobada)
+            `);
+        const id_egresoaprobado = resultEgresoAprobado.recordset[0].id_egresoaprobado;
+        console.log('ID del egreso aprobado insertado:', id_egresoaprobado);
 
-            let solicitud_aprobada = null;
-            if (req.file) {
-                solicitud_aprobada = req.file.filename;
+        
+        for (const material of materiales) {
+            const cantidadEgresada = Number(material.cantidad_egresada);  
+            if (!material.cantidad_egresada || isNaN(material.cantidad_egresada)) {
+                return res.status(400).send('La cantidad egresada es requerida y debe ser un número.');
             }
 
-            const requestEgresos = new sql.Request(transaction);
-            requestEgresos.input('id_material', sql.Int, id_material);
-            requestEgresos.input('cantidad_egresada', sql.Int, cantidad_egresada);
-            requestEgresos.input('fecha_egreso', sql.DateTime, fecha_egreso);
-            requestEgresos.input('id_ubicacion', sql.Int, id_ubicacion);
-            requestEgresos.input('solicitud_aprobada', sql.NVarChar, solicitud_aprobada);
+            
+            const resultEgreso = await new sql.Request()
+                .input('id_ubicacion', sql.Int, id_ubicacion)
+                .input('id_egresoaprobado', sql.Int, id_egresoaprobado)
+                .input('cantidad_egresada', sql.Int, material.cantidad_egresada)  // Aquí tomas la cantidad de cada material
+                .input('fecha_egreso', sql.DateTime, new Date(fecha_egreso))
+                .query(`
+                    INSERT INTO Egresos (id_ubicacion, id_egresoaprobado, cantidad_egresada, fecha_egreso)
+                    OUTPUT INSERTED.id_egreso
+                    VALUES (@id_ubicacion, @id_egresoaprobado, @cantidad_egresada, @fecha_egreso)
+                `);
+            const id_egreso = resultEgreso.recordset[0].id_egreso;
+            console.log('ID del egreso insertado:', id_egreso);
 
-            await requestEgresos.query(`
-                INSERT INTO Egresos (id_material, cantidad_egresada, fecha_egreso, id_ubicacion, solicitud_aprobada) 
-                VALUES (@id_material, @cantidad_egresada, @fecha_egreso, @id_ubicacion, @solicitud_aprobada)
-            `);
-
-            await transaction.commit();
-            res.status(201).json({ message: 'Egreso y ubicación creados exitosamente.' });
-        } catch (err) {
-            await transaction.rollback();
-            console.error('Error durante la transacción:', err);
-            res.status(500).json({ error: 'Hubo un error al crear el egreso y la ubicación.' });
+            
+            const request = new sql.Request();
+            await request
+                .input('id_material', sql.Int, material.id_material)
+                .input('id_egreso', sql.Int, id_egreso)
+                .query(`
+                    INSERT INTO Egreso_Material (id_material, id_egreso)
+                    VALUES (@id_material, @id_egreso)
+                `);
+            console.log('Material insertado en la tabla Egreso:', material);
+            if (isNaN(cantidadEgresada)) {
+                console.log('Cantidad egresada no válida:', material.cantidad_egresada);
+                return res.status(400).send('La cantidad egresada debe ser un número válido.');
+            }
         }
+
+        res.status(201).send('Egreso creado exitosamente');
     } catch (err) {
-        console.error('Error de conexión o en la transacción:', err);
-        res.status(500).json({ error: 'Error en la solicitud.' });
+        console.error('Error en la creación del egreso:', err);
+        res.status(500).send('Error al crear el egreso');
     }
 });
 
